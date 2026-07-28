@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<meta name="theme-color" content="#0D1117">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="XAU Desk">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>XAU DESK — Trading Ledger</title>
+<style>
+  :root{
+    --bg:#0D1117; --panel:#151922; --panel2:#1a1f2b; --border:#262b38; --border2:#1c202b;
+    --text:#D1D4DC; --text-hi:#F0F1F5; --muted:#787b86; --muted2:#9598a1; --dim:#4a4e5a;
+    --gold:#D4AF37; --gold-soft:rgba(212,175,55,.14); --gold-hi:#e6c34f;
+    --up:#26a69a; --up-soft:rgba(38,166,154,.14);
+    --down:#ef5350; --down-soft:rgba(239,83,80,.14);
+    --amber:#f0a63c;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;background:var(--bg);color:var(--text);overscroll-behavior-y:none;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;}
+  button{font-family:inherit;}
+  ::-webkit-scrollbar{display:none;}
+
+  .topbar{position:sticky;top:0;z-index:30;background:rgba(13,17,23,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:10px 16px calc(10px);padding-top:max(10px, env(safe-area-inset-top));}
+  .topbar-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .brand{display:flex;align-items:center;gap:7px;}
+  .brand-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold);}
+  .brand-name{font-size:12px;letter-spacing:1.5px;color:var(--muted2);font-weight:600;}
+  .clock-pill{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
+  .sess-dot{width:5px;height:5px;border-radius:50%;background:var(--dim);}
+  .sess-dot.active{background:var(--gold);box-shadow:0 0 5px var(--gold);}
+
+  .balance-row{display:flex;align-items:baseline;justify-content:space-between;margin-top:8px;}
+  .balance-main{display:flex;align-items:baseline;gap:8px;}
+  .balance-figure{font-size:28px;font-weight:600;letter-spacing:-0.5px;color:var(--text-hi);}
+  .balance-delta{font-size:13px;font-weight:600;padding:2px 7px;border-radius:5px;}
+  .balance-delta.pos{color:var(--up);background:var(--up-soft);}
+  .balance-delta.neg{color:var(--down);background:var(--down-soft);}
+  .balance-delta.flat{color:var(--muted);}
+  .spark{width:76px;height:28px;}
+
+  .wrap{max-width:640px;margin:0 auto;padding:14px 14px calc(96px + var(--safe-b));}
+
+  .stat-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-bottom:14px;scroll-snap-type:x proximity;}
+  .stat-chip{flex:0 0 auto;scroll-snap-align:start;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:9px 13px;min-width:92px;}
+  .stat-chip .lbl{font-size:9.5px;color:var(--muted);letter-spacing:.5px;margin-bottom:4px;}
+  .stat-chip .val{font-size:16px;font-weight:600;}
+  .pos{color:var(--up);} .neg{color:var(--down);} .accent{color:var(--gold);} .warn{color:var(--amber);} .flat{color:var(--text-hi);}
+
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .panel-title{font-size:11px;color:var(--muted);letter-spacing:1.4px;font-weight:600;}
+  .link-btn{background:none;border:none;color:var(--muted);font-size:11px;letter-spacing:.3px;padding:4px 2px;}
+  .link-btn:active{color:var(--gold);}
+  #startBalWrap{display:none;margin-bottom:10px;align-items:center;gap:8px;}
+  #startBalWrap input{width:130px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 10px;color:var(--text);font-size:14px;}
+
+  .chip-row{display:flex;gap:7px;overflow-x:auto;margin-bottom:12px;padding-bottom:1px;}
+  .chip{flex:0 0 auto;padding:7px 13px;border-radius:20px;border:1px solid var(--border);background:var(--panel);color:var(--muted2);font-size:12.5px;font-weight:500;}
+  .chip.active{background:var(--gold-soft);border-color:var(--gold);color:var(--gold);}
+
+  .trade-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:13px 14px;margin-bottom:9px;}
+  .tc-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .tc-left{display:flex;align-items:center;gap:9px;min-width:0;}
+  .dir-badge{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .dir-badge.Buy{background:var(--up-soft);color:var(--up);}
+  .dir-badge.Sell{background:var(--down-soft);color:var(--down);}
+  .tc-meta{min-width:0;}
+  .tc-pair{font-size:14px;font-weight:600;color:var(--text-hi);}
+  .tc-sub{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tc-right{text-align:right;flex:0 0 auto;}
+  .tc-pnl{font-size:15px;font-weight:700;}
+  .tc-badge{font-size:9.5px;padding:1px 6px;border-radius:4px;margin-top:3px;display:inline-block;letter-spacing:.3px;}
+  .tc-badge.Win{background:var(--up-soft);color:var(--up);}
+  .tc-badge.Loss{background:var(--down-soft);color:var(--down);}
+  .tc-badge.Breakeven{background:rgba(120,123,134,.14);color:var(--muted2);}
+
+  .tc-detail{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border2);}
+  .trade-card.open .tc-detail{display:block;}
+  .tc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 8px;margin-bottom:10px;}
+  .tc-field .k{font-size:9.5px;color:var(--muted);letter-spacing:.3px;margin-bottom:2px;}
+  .tc-field .v{font-size:13px;color:var(--text);}
+  .tc-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .tc-tag{font-size:11px;padding:3px 9px;border-radius:14px;background:var(--panel2);color:var(--muted2);}
+  .tc-tag.emo-flag{color:var(--amber);background:rgba(240,166,60,.12);}
+  .tc-notes{font-size:12.5px;color:var(--muted2);line-height:1.5;margin-bottom:10px;}
+  .tc-actions{display:flex;gap:10px;justify-content:flex-end;}
+  .tc-btn{display:flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 13px;font-size:12px;color:var(--muted2);}
+  .tc-btn.del{color:var(--down);}
+  .tc-chevron{color:var(--dim);transition:transform .2s;}
+  .trade-card.open .tc-chevron{transform:rotate(180deg);color:var(--muted);}
+
+  .empty{text-align:center;padding:56px 20px;color:var(--dim);font-size:13px;}
+  .empty b{color:var(--gold);font-weight:600;}
+
+  .fab{position:fixed;right:18px;bottom:calc(22px + var(--safe-b));width:56px;height:56px;border-radius:50%;background:var(--gold);color:#0D1117;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(212,175,55,.35),0 2px 6px rgba(0,0,0,.4);z-index:40;}
+  .fab:active{transform:scale(.94);}
+
+  .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:none;}
+  .sheet-overlay.open{display:block;}
+  .sheet{position:fixed;left:0;right:0;bottom:0;max-height:92vh;background:var(--panel);border-radius:18px 18px 0 0;z-index:51;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .25s ease;padding-bottom:var(--safe-b);}
+  .sheet-overlay.open .sheet{transform:translateY(0);}
+  .sheet-handle{width:36px;height:4px;background:var(--border);border-radius:3px;margin:10px auto 4px;}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:8px 18px 12px;border-bottom:1px solid var(--border);}
+  .sheet-head h3{margin:0;font-size:13px;letter-spacing:1.4px;color:var(--gold);font-weight:700;}
+  .sheet-close{background:none;border:none;color:var(--muted);padding:4px;}
+  .sheet-body{overflow-y:auto;padding:16px 18px;flex:1;}
+
+  .sec-label{font-size:10.5px;color:var(--gold);letter-spacing:1.2px;font-weight:700;margin:18px 0 10px;}
+  .sec-label:first-child{margin-top:0;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;}
+  .field label{display:block;font-size:10.5px;color:var(--muted);letter-spacing:.3px;margin-bottom:5px;}
+  .field input, .field select, .field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 11px;color:var(--text);font-size:15px;font-family:inherit;}
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none;border-color:var(--gold);}
+  .field.full{margin-bottom:10px;}
+
+  .seg{display:flex;gap:8px;margin-bottom:10px;}
+  .seg-btn{flex:1;text-align:center;padding:10px 6px;border-radius:9px;border:1px solid var(--border);background:var(--bg);color:var(--muted2);font-size:13px;font-weight:600;}
+  .seg-btn.Buy.sel{background:var(--up-soft);border-color:var(--up);color:var(--up);}
+  .seg-btn.Sell.sel{background:var(--down-soft);border-color:var(--down);color:var(--down);}
+  .seg-btn.Win.sel{background:var(--up-soft);border-color:var(--up);color:var(--up);}
+  .seg-btn.Loss.sel{background:var(--down-soft);border-color:var(--down);color:var(--down);}
+  .seg-btn.Breakeven.sel{background:rgba(120,123,134,.16);border-color:var(--muted);color:var(--text-hi);}
+
+  .pickchips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;}
+  .pickchip{padding:8px 13px;border-radius:16px;border:1px solid var(--border);background:var(--bg);color:var(--muted2);font-size:12.5px;}
+  .pickchip.sel{background:var(--gold-soft);border-color:var(--gold);color:var(--gold);}
+  .pickchip.warn-sel{background:rgba(240,166,60,.14);border-color:var(--amber);color:var(--amber);}
+
+  .sheet-foot{display:flex;gap:10px;padding:14px 18px;border-top:1px solid var(--border);}
+  .btn-ghost{flex:0 0 auto;background:none;border:none;color:var(--muted);font-size:13px;padding:12px 16px;}
+  .btn-gold{flex:1;background:var(--gold);color:#0D1117;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;letter-spacing:.2px;}
+  .btn-gold:active{background:var(--gold-hi);}
+
+  .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:52;display:none;align-items:center;justify-content:center;padding:20px;}
+  .confirm-overlay.open{display:flex;}
+  .confirm-box{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:320px;width:100%;}
+  .confirm-title{display:flex;align-items:center;gap:8px;color:var(--down);font-size:11px;letter-spacing:1.2px;font-weight:700;margin-bottom:8px;}
+  .confirm-text{font-size:13px;color:var(--muted2);margin:0 0 18px;line-height:1.5;}
+  .confirm-actions{display:flex;justify-content:flex-end;gap:8px;}
+  .btn-red{background:var(--down);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:700;}
+
+  .toast{position:fixed;left:50%;bottom:calc(96px + var(--safe-b));transform:translateX(-50%);background:#1e2330;border:1px solid var(--border);color:var(--text);font-size:12.5px;padding:9px 16px;border-radius:20px;z-index:60;opacity:0;pointer-events:none;transition:opacity .25s;}
+  .toast.show{opacity:1;}
+
+  .install-banner{display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--gold-soft);border:1px solid var(--gold);border-radius:10px;padding:10px 12px;margin-bottom:14px;}
+  .install-banner.show{display:flex;}
+  .install-banner span{font-size:12px;color:var(--gold);}
+  .install-banner button{background:var(--gold);color:#0D1117;border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;}
+
+  svg.ic{display:block;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-row">
+    <div class="brand"><span class="brand-dot"></span><span class="brand-name mono">XAU DESK</span></div>
+    <div class="clock-pill mono">
+      <span id="clockTime">--:--</span>
+      <span class="sess-dot" id="dotAsian" title="Asian"></span>
+      <span class="sess-dot" id="dotLondon" title="London"></span>
+      <span class="sess-dot" id="dotNY" title="New York"></span>
+    </div>
+  </div>
+  <div class="balance-row">
+    <div class="balance-main">
+      <span class="balance-figure mono" id="hdrBalance">₹0.00</span>
+      <span class="balance-delta mono" id="hdrDelta">—</span>
+    </div>
+    <svg class="spark" id="hdrSpark" viewBox="0 0 76 28" preserveAspectRatio="none"></svg>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="install-banner" id="installBanner">
+    <span>Install XAU Desk as an app on your phone</span>
+    <button id="installBtn">Install</button>
+  </div>
+
+  <div class="stat-scroll" id="statsScroll"></div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">EQUITY CURVE</div>
+      <button class="link-btn" id="toggleBalBtn">STARTING BALANCE ▾</button>
+    </div>
+    <div id="startBalWrap">
+      <span style="color:var(--muted);font-size:13px;">₹</span>
+      <input type="number" id="startBalInput" value="5000">
+    </div>
+    <div id="chartHost"></div>
+  </div>
+
+  <div class="chip-row" id="sessionChips"></div>
+  <div class="chip-row" id="resultChips"></div>
+
+  <div id="tradeList"></div>
+
+  <div class="panel" style="margin-top:8px;">
+    <div class="panel-head"><div class="panel-title">DATA</div></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="tc-btn" id="exportBtn">Export backup (.json)</button>
+      <button class="tc-btn" id="importBtnLabel">Import backup</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;">All data is stored only on this device. Export a backup before clearing browser data or switching phones.</div>
+  </div>
+
+</div>
+
+<button class="fab" id="addTradeBtn" aria-label="Log trade">
+  <svg class="ic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0D1117" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<div class="sheet-overlay" id="formOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <h3 id="formTitle">LOG TRADE</h3>
+      <button class="sheet-close" id="closeFormBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="formBody"></div>
+    <div class="sheet-foot">
+      <button class="btn-ghost" id="cancelFormBtn">Cancel</button>
+      <button class="btn-gold" id="saveTradeBtn">Add trade</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="deleteOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title mono">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+      DELETE TRADE
+    </div>
+    <p class="confirm-text">This will permanently remove this trade from your ledger. This can't be undone.</p>
+    <div class="confirm-actions">
+      <button class="btn-ghost" id="cancelDeleteBtn">Cancel</button>
+      <button class="btn-red" id="confirmDeleteBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ LOCAL STORAGE PERSISTENCE (fully offline, on-device only) ============
+const LS_TRADES = "xauDesk.trades";
+const LS_SETTINGS = "xauDesk.settings";
+function lsLoadTrades(){ try{ const v = localStorage.getItem(LS_TRADES); return v?JSON.parse(v):[]; }catch(e){ return []; } }
+function lsSaveTrades(t){ try{ localStorage.setItem(LS_TRADES, JSON.stringify(t)); }catch(e){} }
+function lsLoadSettings(){ try{ const v = localStorage.getItem(LS_SETTINGS); return v?JSON.parse(v):{startingBalance:5000}; }catch(e){ return {startingBalance:5000}; } }
+function lsSaveSettings(s){ try{ localStorage.setItem(LS_SETTINGS, JSON.stringify(s)); }catch(e){} }
+
+// ---------- constants ----------
+const SESSIONS = ["London","New York","Asian","Overlap"];
+const STRATEGIES = ["TJL2","QML","RBS","BOS Continuation","Liquidity Sweep","Order Block","Other"];
+const EMOTIONS = ["Calm","Confident","FOMO","Anxious","Revenge","Impatient","Hesitant"];
+const RESULTS = ["Win","Loss","Breakeven"];
+const MISTAKE_TAGS = ["Early entry","No confirmation","Moved SL","Oversized risk","Revenge trade","Chased price","None"];
+
+let trades = lsLoadTrades();
+let startingBalance = (lsLoadSettings().startingBalance) || 5000;
+let editingId = null;
+let filterSession = "All";
+let filterResult = "All";
+let deleteTargetId = null;
+let openCardId = null;
+let draft = null;
+let selectedMistakeTags = [];
+
+function uid(){ return "t"+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function num(v){ if(v===""||v===null||v===undefined) return null; const n=Number(v); return isNaN(n)?null:n; }
+function fmt(n,d=2){ return (n===null||n===undefined||isNaN(n)) ? "—" : n.toLocaleString("en-IN",{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fmtSigned(n,d=2){ if(n===null||n===undefined||isNaN(n)) return "—"; return (n>0?"+":"")+fmt(n,d); }
+function esc(s){ if(s===undefined||s===null) return ""; return String(s).replace(/[&<>"']/g, c=>({'&':'&lt;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c)); }
+
+function emptyDraft(){
+  return {id:null,date:new Date().toISOString().slice(0,10),pair:"XAUUSD",session:"London",direction:"Buy",
+    strategy:"TJL2",entry:"",exit:"",sl:"",tp:"",pips:"",risk:"",reward:"",rr:"",result:"Win",pnl:"",
+    emotion:"Calm",mistake:"",notes:""};
+}
+
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+function saveTrades(){ lsSaveTrades(trades); }
+function saveSettings(){ lsSaveSettings({startingBalance}); }
+
+// ---------- session clock ----------
+function getISTParts(){
+  const now = new Date();
+  const ist = new Date(now.toLocaleString("en-US",{timeZone:"Asia/Kolkata"}));
+  return { hour: ist.getHours()+ist.getMinutes()/60, label: ist.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}) };
+}
+function sessionState(hour){
+  return { asian: hour>=5.5 && hour<14.5, london: hour>=12.5 && hour<21.5, ny: (hour>=18 || hour<2.5) };
+}
+function renderClock(){
+  const c = getISTParts();
+  document.getElementById("clockTime").textContent = c.label;
+  const s = sessionState(c.hour);
+  document.getElementById("dotAsian").classList.toggle("active", s.asian);
+  document.getElementById("dotLondon").classList.toggle("active", s.london);
+  document.getElementById("dotNY").classList.toggle("active", s.ny);
+}
+
+// ---------- stats ----------
+function computeStats(){
+  const closed = trades.filter(t=>num(t.pnl)!==null);
+  const totalPnL = closed.reduce((a,t)=>a+num(t.pnl),0);
+  const wins = closed.filter(t=>t.result==="Win");
+  const losses = closed.filter(t=>t.result==="Loss");
+  const grossProfit = wins.reduce((a,t)=>a+Math.max(num(t.pnl)||0,0),0);
+  const grossLoss = Math.abs(losses.reduce((a,t)=>a+Math.min(num(t.pnl)||0,0),0));
+  const winRate = closed.length ? (wins.length/closed.length)*100 : null;
+  const profitFactor = grossLoss>0 ? grossProfit/grossLoss : (grossProfit>0?Infinity:null);
+  const rrValues = closed.map(t=>num(t.rr)).filter(v=>v!==null);
+  const avgRR = rrValues.length ? rrValues.reduce((a,b)=>a+b,0)/rrValues.length : null;
+  let streak=0, streakType=null;
+  for(let i=closed.length-1;i>=0;i--){
+    const r = closed[i].result;
+    if(r==="Breakeven") break;
+    if(streakType===null){streakType=r;streak=1;}
+    else if(r===streakType) streak++;
+    else break;
+  }
+  const balance = startingBalance + totalPnL;
+  const fomoCount = closed.filter(t=>t.emotion==="FOMO").length;
+  return {totalPnL,winRate,profitFactor,avgRR,streak,streakType,balance,closedCount:closed.length,fomoCount};
+}
+
+function sortedEquity(){
+  let running = startingBalance;
+  const sorted = [...trades].filter(t=>num(t.pnl)!==null).sort((a,b)=> a.date<b.date?-1:a.date>b.date?1:0);
+  return [{balance:startingBalance,label:"Start"}, ...sorted.map(t=>{ running+=num(t.pnl); return {balance:Math.round(running*100)/100,label:t.date}; })];
+}
+
+function renderHeader(){
+  const s = computeStats();
+  document.getElementById("hdrBalance").textContent = "₹"+fmt(s.balance);
+  const deltaEl = document.getElementById("hdrDelta");
+  if(s.totalPnL>0){ deltaEl.textContent = "+"+fmt(s.totalPnL); deltaEl.className="balance-delta mono pos"; }
+  else if(s.totalPnL<0){ deltaEl.textContent = fmt(s.totalPnL); deltaEl.className="balance-delta mono neg"; }
+  else { deltaEl.textContent = "0.00"; deltaEl.className="balance-delta mono flat"; }
+
+  const data = sortedEquity();
+  const svg = document.getElementById("hdrSpark");
+  if(data.length<2){ svg.innerHTML=""; return; }
+  const w=76,h=28,pad=2;
+  const values = data.map(d=>d.balance);
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = (max-min)||1;
+  const xStep = (w-pad*2)/(data.length-1);
+  const yFor = v => h-pad-((v-min)/range)*(h-pad*2);
+  const pts = data.map((d,i)=>[pad+i*xStep, yFor(d.balance)]);
+  const d3 = pts.map((p,i)=>`${i===0?"M":"L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const color = data[data.length-1].balance >= data[0].balance ? "var(--up)" : "var(--down)";
+  svg.innerHTML = `<path d="${d3}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+}
+
+function renderStats(){
+  const s = computeStats();
+  const cards = [
+    {label:"WIN RATE",value:s.winRate===null?"—":fmt(s.winRate,1)+"%",cls:"flat"},
+    {label:"PROFIT FACTOR",value:s.profitFactor===null?"—":(s.profitFactor===Infinity?"∞":fmt(s.profitFactor)),cls:"flat"},
+    {label:"AVG RR",value:s.avgRR===null?"—":"1:"+fmt(s.avgRR),cls:"flat"},
+    {label:"TRADES",value:String(s.closedCount),cls:"flat"},
+    {label:"STREAK",value:s.streak?`${s.streak}${s.streakType==="Win"?"W":"L"}`:"—",cls:s.streakType==="Win"?"pos":s.streakType==="Loss"?"neg":"flat"},
+    {label:"FOMO",value:String(s.fomoCount),cls:s.fomoCount>0?"warn":"flat"},
+  ];
+  document.getElementById("statsScroll").innerHTML = cards.map(c=>`
+    <div class="stat-chip">
+      <div class="lbl mono">${c.label}</div>
+      <div class="val mono ${c.cls}">${c.value}</div>
+    </div>`).join("");
+}
+
+function renderChart(){
+  const host = document.getElementById("chartHost");
+  const data = sortedEquity();
+  if(data.length<2){
+    host.innerHTML = `<div style="height:180px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12px;" class="mono">Log a trade to see your equity curve</div>`;
+    return;
+  }
+  const w=560,h=170,pad=24;
+  const values = data.map(d=>d.balance);
+  const min = Math.min(...values, startingBalance);
+  const max = Math.max(...values, startingBalance);
+  const range = (max-min)||1;
+  const xStep = (w-pad*2)/(data.length-1);
+  const yFor = v => h-pad-((v-min)/range)*(h-pad*2);
+  const points = data.map((d,i)=>[pad+i*xStep, yFor(d.balance)]);
+  const pathD = points.map((p,i)=>`${i===0?"M":"L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const areaD = pathD + ` L${points[points.length-1][0].toFixed(1)},${h-pad} L${points[0][0].toFixed(1)},${h-pad} Z`;
+  const startY = yFor(startingBalance);
+  const last = data[data.length-1];
+  const lastPt = points[points.length-1];
+
+  host.innerHTML = `
+    <div style="height:180px;width:100%;">
+      <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:100%;" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#D4AF37" stop-opacity="0.22"/>
+            <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <line x1="${pad}" y1="${startY}" x2="${w-pad}" y2="${startY}" stroke="#2a2f3d" stroke-dasharray="4 4" stroke-width="1"/>
+        <path d="${areaD}" fill="url(#areaFill)" stroke="none"/>
+        <path d="${pathD}" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${lastPt[0]}" cy="${lastPt[1]}" r="3.2" fill="#D4AF37"/>
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim);padding:0 2px;margin-top:-2px;" class="mono">
+        <span>${esc(data[0].label)}</span><span style="color:var(--gold);">₹${fmt(last.balance)}</span>
+      </div>
+    </div>`;
+}
+
+function renderFilterChips(){
+  const sHost = document.getElementById("sessionChips");
+  const rHost = document.getElementById("resultChips");
+  const sOpts = ["All",...SESSIONS];
+  const rOpts = ["All",...RESULTS];
+  sHost.innerHTML = sOpts.map(o=>`<button class="chip${o===filterSession?" active":""}" data-filt="session" data-val="${o}">${o}</button>`).join("");
+  rHost.innerHTML = rOpts.map(o=>`<button class="chip${o===filterResult?" active":""}" data-filt="result" data-val="${o}">${o}</button>`).join("");
+  sHost.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ filterSession=b.dataset.val; renderFilterChips(); renderTradeList(); }));
+  rHost.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ filterResult=b.dataset.val; renderFilterChips(); renderTradeList(); }));
+}
+
+const dirArrow = {
+  Buy: `<svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`,
+  Sell: `<svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>`
+};
+const chevronSvg = `<svg class="ic tc-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
+
+function renderTradeList(){
+  const host = document.getElementById("tradeList");
+  const filtered = [...trades]
+    .filter(t=> filterSession==="All"?true:t.session===filterSession)
+    .filter(t=> filterResult==="All"?true:t.result===filterResult)
+    .sort((a,b)=> a.date<b.date?1:a.date>b.date?-1:0);
+
+  if(filtered.length===0){
+    host.innerHTML = `<div class="empty">No trades match this filter yet.<br>Tap <b>+</b> to log your first entry.</div>`;
+    return;
+  }
+
+  host.innerHTML = filtered.map(t=>{
+    const pnlVal = num(t.pnl);
+    const pnlCls = pnlVal>0?"pos":pnlVal<0?"neg":"flat";
+    const isOpen = t.id===openCardId;
+    const emoFlag = (t.emotion==="FOMO"||t.emotion==="Revenge");
+    return `
+    <div class="trade-card${isOpen?" open":""}" data-id="${t.id}">
+      <div class="tc-top" data-act="toggle" data-id="${t.id}">
+        <div class="tc-left">
+          <div class="dir-badge ${t.direction}">${dirArrow[t.direction]||""}</div>
+          <div class="tc-meta">
+            <div class="tc-pair">${esc(t.pair)}</div>
+            <div class="tc-sub">${esc(t.date)} · ${esc(t.session)} · ${esc(t.strategy)}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="tc-right">
+            <div class="tc-pnl mono ${pnlCls}">${fmtSigned(pnlVal)}</div>
+            <div class="tc-badge ${esc(t.result)}">${esc(t.result).toUpperCase()}</div>
+          </div>
+          ${chevronSvg}
+        </div>
+      </div>
+      <div class="tc-detail">
+        <div class="tc-grid">
+          <div class="tc-field"><div class="k">ENTRY</div><div class="v mono">${t.entry||"—"}</div></div>
+          <div class="tc-field"><div class="k">EXIT</div><div class="v mono">${t.exit||"—"}</div></div>
+          <div class="tc-field"><div class="k">RR</div><div class="v mono">${t.rr?"1:"+esc(t.rr):"—"}</div></div>
+          <div class="tc-field"><div class="k">SL</div><div class="v mono">${t.sl||"—"}</div></div>
+          <div class="tc-field"><div class="k">TP</div><div class="v mono">${t.tp||"—"}</div></div>
+          <div class="tc-field"><div class="k">PIPS</div><div class="v mono">${t.pips||"—"}</div></div>
+        </div>
+        <div class="tc-tags">
+          <span class="tc-tag${emoFlag?" emo-flag":""}">${esc(t.emotion)}</span>
+          ${t.mistake ? `<span class="tc-tag">${esc(t.mistake)}</span>` : ""}
+        </div>
+        ${t.notes ? `<div class="tc-notes">${esc(t.notes)}</div>` : ""}
+        <div class="tc-actions">
+          <button class="tc-btn" data-act="edit" data-id="${t.id}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+            Edit
+          </button>
+          <button class="tc-btn del" data-act="del" data-id="${t.id}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  host.querySelectorAll('[data-act="toggle"]').forEach(el=>el.addEventListener("click",()=>{
+    const id = el.dataset.id;
+    openCardId = (openCardId===id) ? null : id;
+    renderTradeList();
+  }));
+  host.querySelectorAll('[data-act="edit"]').forEach(el=>el.addEventListener("click",(e)=>{ e.stopPropagation(); openEditForm(el.dataset.id); }));
+  host.querySelectorAll('[data-act="del"]').forEach(el=>el.addEventListener("click",(e)=>{ e.stopPropagation(); openDeleteConfirm(el.dataset.id); }));
+}
+
+function segRow(name, options, current){
+  return `<div class="seg" data-seg="${name}">${options.map(o=>
+    `<button type="button" class="seg-btn ${o}${o===current?" sel":""}" data-val="${o}">${o}</button>`).join("")}</div>`;
+}
+function selectOpts(list, val){ return list.map(o=>`<option value="${o}" ${o===val?"selected":""}>${o}</option>`).join(""); }
+
+function renderForm(){
+  const d = draft;
+  selectedMistakeTags = d.mistake ? d.mistake.split(",").map(s=>s.trim()).filter(Boolean) : [];
+
+  document.getElementById("formBody").innerHTML = `
+    <div class="sec-label">SETUP</div>
+    <div class="row2">
+      <div class="field"><label>PAIR</label><input id="f_pair" value="${esc(d.pair)}"></div>
+      <div class="field"><label>DATE</label><input type="date" id="f_date" value="${esc(d.date)}"></div>
+    </div>
+    <div class="field" style="margin-bottom:10px;"><label>DIRECTION</label>${segRow("direction",["Buy","Sell"],d.direction)}</div>
+    <div class="row2">
+      <div class="field"><label>SESSION</label><select id="f_session">${selectOpts(SESSIONS,d.session)}</select></div>
+      <div class="field"><label>STRATEGY</label><select id="f_strategy">${selectOpts(STRATEGIES,d.strategy)}</select></div>
+    </div>
+
+    <div class="sec-label">LEVELS</div>
+    <div class="row2">
+      <div class="field"><label>ENTRY</label><input type="number" step="any" id="f_entry" value="${esc(d.entry)}"></div>
+      <div class="field"><label>EXIT</label><input type="number" step="any" id="f_exit" value="${esc(d.exit)}"></div>
+    </div>
+    <div class="row3">
+      <div class="field"><label>SL</label><input type="number" step="any" id="f_sl" value="${esc(d.sl)}"></div>
+      <div class="field"><label>TP</label><input type="number" step="any" id="f_tp" value="${esc(d.tp)}"></div>
+      <div class="field"><label>PIPS</label><input type="number" step="any" id="f_pips" value="${esc(d.pips)}"></div>
+    </div>
+
+    <div class="sec-label">RISK / RESULT</div>
+    <div class="row3">
+      <div class="field"><label>RISK ₹</label><input type="number" step="any" id="f_risk" value="${esc(d.risk)}"></div>
+      <div class="field"><label>REWARD ₹</label><input type="number" step="any" id="f_reward" value="${esc(d.reward)}"></div>
+      <div class="field"><label>RR</label><input type="text" id="f_rr" value="${esc(d.rr)}" placeholder="auto"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>P&amp;L ₹</label><input type="number" step="any" id="f_pnl" value="${esc(d.pnl)}"></div>
+      <div class="field"><label>RESULT</label></div>
+    </div>
+    <div style="margin-top:-42px;margin-bottom:10px;">${segRow("result",RESULTS,d.result)}</div>
+
+    <div class="sec-label">PSYCHOLOGY</div>
+    <div class="field" style="margin-bottom:4px;"><label>EMOTION</label></div>
+    <div class="pickchips" id="emotionChips">
+      ${EMOTIONS.map(e=>`<button type="button" class="pickchip${e===d.emotion?" sel":""}${e===d.emotion&&(e==="FOMO"||e==="Revenge")?" warn-sel":""}" data-emo="${e}">${e}</button>`).join("")}
+    </div>
+    <div class="field" style="margin-bottom:4px;"><label>MISTAKE (tap any that apply)</label></div>
+    <div class="pickchips" id="mistakeChips">
+      ${MISTAKE_TAGS.map(m=>`<button type="button" class="pickchip${selectedMistakeTags.includes(m)?" sel":""}" data-mis="${m}">${m}</button>`).join("")}
+    </div>
+    <div class="field full"><label>NOTES</label><textarea id="f_notes" rows="3" placeholder="What did you see on the chart? Anything to remember next time?">${esc(d.notes)}</textarea></div>
+  `;
+  document.getElementById("formTitle").textContent = editingId ? "EDIT TRADE" : "LOG TRADE";
+  document.getElementById("saveTradeBtn").textContent = editingId ? "Save changes" : "Add trade";
+
+  document.querySelectorAll('[data-seg]').forEach(segEl=>{
+    segEl.querySelectorAll(".seg-btn").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        segEl.querySelectorAll(".seg-btn").forEach(b=>b.classList.remove("sel"));
+        btn.classList.add("sel");
+      });
+    });
+  });
+  document.querySelectorAll("#emotionChips .pickchip").forEach(chip=>{
+    chip.addEventListener("click",()=>{
+      document.querySelectorAll("#emotionChips .pickchip").forEach(c=>{c.classList.remove("sel");c.classList.remove("warn-sel");});
+      chip.classList.add("sel");
+      if(chip.dataset.emo==="FOMO"||chip.dataset.emo==="Revenge") chip.classList.add("warn-sel");
+    });
+  });
+  document.querySelectorAll("#mistakeChips .pickchip").forEach(chip=>{
+    chip.addEventListener("click",()=>{
+      if(chip.dataset.mis==="None"){
+        document.querySelectorAll("#mistakeChips .pickchip").forEach(c=>c.classList.remove("sel"));
+        chip.classList.add("sel");
+      }else{
+        document.querySelector('#mistakeChips .pickchip[data-mis="None"]').classList.remove("sel");
+        chip.classList.toggle("sel");
+      }
+    });
+  });
+  const riskEl = document.getElementById("f_risk");
+  const rewardEl = document.getElementById("f_reward");
+  const rrEl = document.getElementById("f_rr");
+  function autoRR(){ const r=num(riskEl.value), rw=num(rewardEl.value); if(r&&rw) rrEl.value=(rw/r).toFixed(2); }
+  riskEl.addEventListener("input", autoRR);
+  rewardEl.addEventListener("input", autoRR);
+
+  let resultTouched = false;
+  document.querySelector('[data-seg="result"]').addEventListener("click", ()=>{ resultTouched = true; });
+  document.getElementById("f_pnl").addEventListener("input", (e)=>{
+    if(resultTouched) return;
+    const v = num(e.target.value);
+    if(v===null) return;
+    const target = v>0?"Win":v<0?"Loss":"Breakeven";
+    const segEl = document.querySelector('[data-seg="result"]');
+    segEl.querySelectorAll(".seg-btn").forEach(b=>b.classList.toggle("sel", b.dataset.val===target));
+  });
+}
+
+function getSegVal(name){ const el=document.querySelector(`[data-seg="${name}"] .seg-btn.sel`); return el?el.dataset.val:null; }
+function getMistakeVal(){
+  const sel = [...document.querySelectorAll("#mistakeChips .pickchip.sel")].map(c=>c.dataset.mis);
+  return sel.filter(s=>s!=="None").join(", ");
+}
+function getEmotionVal(){ const el=document.querySelector("#emotionChips .pickchip.sel"); return el?el.dataset.emo:"Calm"; }
+
+function collectDraft(){
+  return {
+    id: draft.id,
+    date: document.getElementById("f_date").value,
+    pair: document.getElementById("f_pair").value,
+    session: document.getElementById("f_session").value,
+    direction: getSegVal("direction") || "Buy",
+    strategy: document.getElementById("f_strategy").value,
+    result: getSegVal("result") || "Win",
+    entry: document.getElementById("f_entry").value,
+    exit: document.getElementById("f_exit").value,
+    sl: document.getElementById("f_sl").value,
+    tp: document.getElementById("f_tp").value,
+    pips: document.getElementById("f_pips").value,
+    risk: document.getElementById("f_risk").value,
+    reward: document.getElementById("f_reward").value,
+    rr: document.getElementById("f_rr").value,
+    pnl: document.getElementById("f_pnl").value,
+    emotion: getEmotionVal(),
+    mistake: getMistakeVal(),
+    notes: document.getElementById("f_notes").value,
+  };
+}
+
+function openNewForm(){ draft = emptyDraft(); editingId = null; renderForm(); document.getElementById("formOverlay").classList.add("open"); }
+function openEditForm(id){
+  const t = trades.find(t=>t.id===id);
+  if(!t) return;
+  draft = {...t}; editingId = id; renderForm();
+  document.getElementById("formOverlay").classList.add("open");
+}
+function closeForm(){ document.getElementById("formOverlay").classList.remove("open"); }
+
+function saveTrade(){
+  const d = collectDraft();
+  if(!d.date || !d.pair) return;
+  d.id = d.id || uid();
+  const exists = trades.some(t=>t.id===d.id);
+  trades = exists ? trades.map(t=>t.id===d.id?d:t) : [...trades, d];
+  saveTrades();
+  closeForm();
+  renderAll();
+  toast(exists ? "Trade updated" : "Trade saved");
+}
+
+function openDeleteConfirm(id){ deleteTargetId = id; document.getElementById("deleteOverlay").classList.add("open"); }
+function closeDeleteConfirm(){ deleteTargetId = null; document.getElementById("deleteOverlay").classList.remove("open"); }
+function confirmDelete(){
+  trades = trades.filter(t=>t.id!==deleteTargetId);
+  if(openCardId===deleteTargetId) openCardId = null;
+  saveTrades();
+  closeDeleteConfirm();
+  renderAll();
+  toast("Trade deleted");
+}
+
+// ---------- backup export / import ----------
+function exportBackup(){
+  const payload = { trades, startingBalance, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `xau-desk-backup-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast("Backup downloaded");
+}
+function importBackup(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(Array.isArray(data.trades)){
+        trades = data.trades;
+        if(typeof data.startingBalance === "number") startingBalance = data.startingBalance;
+        saveTrades(); saveSettings();
+        document.getElementById("startBalInput").value = startingBalance;
+        renderAll();
+        toast("Backup restored");
+      }else{
+        toast("File doesn't look like a valid backup");
+      }
+    }catch(err){ toast("Couldn't read that file"); }
+  };
+  reader.readAsText(file);
+}
+
+// ---------- wire up ----------
+function renderAll(){ renderHeader(); renderStats(); renderChart(); renderFilterChips(); renderTradeList(); }
+
+document.getElementById("addTradeBtn").addEventListener("click", openNewForm);
+document.getElementById("closeFormBtn").addEventListener("click", closeForm);
+document.getElementById("cancelFormBtn").addEventListener("click", closeForm);
+document.getElementById("saveTradeBtn").addEventListener("click", saveTrade);
+document.getElementById("cancelDeleteBtn").addEventListener("click", closeDeleteConfirm);
+document.getElementById("confirmDeleteBtn").addEventListener("click", confirmDelete);
+document.getElementById("formOverlay").addEventListener("click",(e)=>{ if(e.target.id==="formOverlay") closeForm(); });
+document.getElementById("deleteOverlay").addEventListener("click",(e)=>{ if(e.target.id==="deleteOverlay") closeDeleteConfirm(); });
+
+document.getElementById("toggleBalBtn").addEventListener("click", ()=>{
+  const w = document.getElementById("startBalWrap");
+  const open = w.style.display === "flex";
+  w.style.display = open ? "none" : "flex";
+  document.getElementById("toggleBalBtn").textContent = "STARTING BALANCE " + (open?"▾":"▴");
+});
+document.getElementById("startBalInput").addEventListener("input", (e)=>{
+  startingBalance = Number(e.target.value) || 0;
+  saveSettings();
+  renderHeader(); renderChart();
+});
+
+document.getElementById("exportBtn").addEventListener("click", exportBackup);
+document.getElementById("importBtnLabel").addEventListener("click", ()=>document.getElementById("importFile").click());
+document.getElementById("importFile").addEventListener("change", (e)=>{
+  if(e.target.files && e.target.files[0]) importBackup(e.target.files[0]);
+  e.target.value = "";
+});
+
+// initial paint (instant — reads straight from localStorage, already loaded above)
+document.getElementById("startBalInput").value = startingBalance;
+renderClock();
+renderAll();
+setInterval(renderClock, 30000);
+
+// ---------- PWA install prompt ----------
+let deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", (e)=>{
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById("installBanner").classList.add("show");
+});
+document.getElementById("installBtn").addEventListener("click", async ()=>{
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById("installBanner").classList.remove("show");
+});
+window.addEventListener("appinstalled", ()=>{
+  document.getElementById("installBanner").classList.remove("show");
+});
+
+// ---------- service worker (offline caching) ----------
+if("serviceWorker" in navigator){
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
